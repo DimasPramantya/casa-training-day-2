@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package com.proto.uservalidator;
+
+import "validate/validate.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "UserValidatorProto";
+option java_package = "com.example.casagrpctask";
+
+service ValidationService {
+  rpc ValidateProfile(ValidationRequest) returns (ValidationResponse);
+}
+
+message ValidationRequest {
+  string request_id = 1; // For logging
+  UserProfile profile = 2; // A nested message!
+}
+
+message UserProfile {
+  // Rule: must be 5-20 chars
+  string username = 1 [(validate.rules).string = {min_len: 5, max_len: 20}];
+  // Rule: must contain "@"
+  string email = 2 [(validate.rules).string = {contains: "@"}];
+  // Rule: must be 18 or older
+  int32 age = 3 [(validate.rules).int32 = {gte: 18}];
+  // Another nested message
+  Address shipping_address = 4 [(validate.rules).message = {required: true, skip: false}];
+  // A list! Rule: must have at least 1 "MOBILE"
+  repeated Phone phones = 5;
+}
+
+message Address {
+  string street = 1 [(validate.rules).string = {min_len: 5}];
+  string city = 2 [(validate.rules).string = {min_len: 3}];
+  // Rule: must be 5 digits
+  string zip_code = 3 [(validate.rules).string = {len: 5}];
+}
+
+enum PhoneType {
+  PHONE_TYPE_UNSPECIFIED = 0;
+  MOBILE = 1;
+  HOME = 2;
+  WORK = 3;
+}
+
+message Phone {
+  PhoneType type = 1 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+  // Rule: must be 10-15 digits
+  string number = 2 [(validate.rules).string = {min_len: 10, max_len: 15}];
+}
+
+message ValidationResponse {
+  bool is_valid = 1;
+  repeated string errors = 2; // A list of human-readable error messages
+}

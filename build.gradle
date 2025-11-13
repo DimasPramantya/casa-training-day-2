@@ -1,0 +1,103 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.7'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.google.protobuf' version '0.9.4'
+}
+
+ext {
+    springGrpcVersion = "0.12.0"
+    pgvVersion = "1.0.4"
+    protobufVersion = "3.25.5"
+    grpcVersion = "1.76.0"
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+description = 'casa-grpc-task'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly 'org.projectlombok:lombok'
+    runtimeOnly 'org.postgresql:postgresql'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Protobuf and gRPC
+    implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
+    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
+    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    implementation "io.grpc:grpc-services:${grpcVersion}"
+
+    // Spring gRPC
+    implementation 'org.springframework.grpc:spring-grpc-spring-boot-starter'
+
+    // PGV - Use build.gradle.kts compatible version
+    implementation "build.buf.protoc-gen-validate:pgv-java-stub:${pgvVersion}"
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.grpc:spring-grpc-dependencies:${springGrpcVersion}"
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protobufVersion}"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+        }
+        javapgv {
+            artifact = "build.buf.protoc-gen-validate:protoc-gen-validate:${pgvVersion}"
+        }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                java {}
+            }
+            task.plugins {
+                grpc {}
+                javapgv {
+                    option "lang=java"
+                }
+            }
+        }
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs 'build/generated/source/proto/main/grpc'
+            srcDirs 'build/generated/source/proto/main/java'
+            srcDirs 'build/generated/source/proto/main/javapgv'
+        }
+    }
+}
